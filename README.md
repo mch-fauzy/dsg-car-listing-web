@@ -22,6 +22,6 @@ To get started with the API, follow the steps below:
    ```
    npm run dev
    ```
-5. Make sure the [https://github.com/mch-fauzy/dsg-car-listing-server](Server) is also started to fetch the data 
+5. Make sure the [Server](https://github.com/mch-fauzy/dsg-car-listing-server) is also started to fetch the data 
 
 The API will be available at [http://localhost:5173](http://localhost:5173).

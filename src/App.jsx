@@ -9,6 +9,8 @@ const App = () => {
   const [visible, setVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
+  const [editingCarId, setEditingCarId] = useState(null);
+  const [originalCars, setOriginalCars] = useState([]);
 
   useEffect(() => {
     fetchCars();
@@ -18,8 +20,9 @@ const App = () => {
     setLoading(true);
     try {
       const response = await axios.get('http://localhost:3000/v1/cars');
-      const responseData = response.data.data; // Accessing the 'data' property of the response
+      const responseData = response.data.data;
       setCars(responseData);
+      setOriginalCars(responseData);
     } catch (error) {
       console.error('Error fetching cars:', error);
       message.error('Failed to fetch cars');
@@ -45,16 +48,27 @@ const App = () => {
       setVisible(false);
       fetchCars();
       message.success('Car created successfully');
+      form.resetFields();
     } catch (error) {
       console.error('Error creating car:', error);
       message.error('Failed to create car');
     }
   };
 
-  const handleEdit = async (id, values) => {
+  const handleEdit = (id) => {
+    setEditingCarId(id);
+    setVisible(true);
+    const carToEdit = cars.find((car) => car.id === id);
+    form.setFieldsValue(carToEdit);
+  };
+
+  const handleSaveEdit = async () => {
     try {
-      await axios.put(`http://localhost:3000/v1/cars/${id}`, values);
+      const values = await form.validateFields();
+      await axios.put(`http://localhost:3000/v1/cars/${editingCarId}`, values);
+      setVisible(false);
       fetchCars();
+      form.resetFields();
       message.success('Car updated successfully');
     } catch (error) {
       console.error('Error updating car:', error);
@@ -62,33 +76,29 @@ const App = () => {
     }
   };
 
+  const handleCancel = () => {
+    setVisible(false);
+  };
+
   const handleSearch = (value) => {
     if (value === '') {
-      fetchCars();
+      setCars(originalCars);
     } else {
-      const filteredCars = cars.filter((car) =>
+      const filteredCars = originalCars.filter((car) =>
         car.merek.toLowerCase().includes(value.toLowerCase())
       );
       setCars(filteredCars);
     }
   };
 
-  const showModal = () => {
-    setVisible(true);
-  };
-
-  const handleCancel = () => {
-    setVisible(false);
-  };
-
   return (
     <div>
-      <Button type="primary" onClick={showModal} style={{ marginBottom: 16 }}>
+      <Button type="primary" onClick={() => setVisible(true)} style={{ marginBottom: 16 }}>
         Create
       </Button>
       <Input.Search
         placeholder="Search by Merek"
-        onSearch={handleSearch}
+        onSearch={(value) => handleSearch(value)}
         style={{ width: 200, marginBottom: 16 }}
       />
       <Spin spinning={loading}>
@@ -104,7 +114,7 @@ const App = () => {
             key="action"
             render={(text, record) => (
               <span>
-                <Button type="link" onClick={() => handleEdit(record.id, record)}>
+                <Button type="link" onClick={() => handleEdit(record.id)}>
                   Edit
                 </Button>
                 <Button type="link" onClick={() => handleDelete(record.id)}>
@@ -116,17 +126,12 @@ const App = () => {
         </Table>
       </Spin>
       <Modal
-        title="Create Car"
-        visible={visible}
+        title={editingCarId ? "Edit Car" : "Create Car"}
+        open={visible}
         onCancel={handleCancel}
-        onOk={() => {
-          form.validateFields().then((values) => {
-            form.resetFields();
-            handleCreate(values);
-          });
-        }}
+        onOk={() => form.submit()}
       >
-        <Form form={form} layout="vertical">
+        <Form form={form} layout="vertical" onFinish={editingCarId ? handleSaveEdit : handleCreate}>
           <Form.Item name="merek" label="Merek" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
